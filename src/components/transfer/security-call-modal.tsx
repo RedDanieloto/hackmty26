@@ -141,13 +141,13 @@ export function SecurityCallModal() {
                 <View style={styles.txSnapshotCol}>
                   <Text style={styles.txSnapshotLabel}>MONTO A AUTORIZAR</Text>
                   <Text style={styles.txSnapshotAmount}>
-                    ${transfer.amount.toLocaleString('es-MX')} MXN
+                    ${(liveTransferData?.amount ?? transfer.amount).toLocaleString('es-MX')} MXN
                   </Text>
                 </View>
                 <View style={[styles.txSnapshotCol, { alignItems: 'flex-end' }]}>
                   <Text style={styles.txSnapshotLabel}>BENEFICIARIO</Text>
                   <Text style={styles.txSnapshotRecipient} numberOfLines={1}>
-                    {transfer.recipientName || 'Destinatario'}
+                    {liveTransferData?.beneficiary_name || transfer.recipientName || 'Destinatario'}
                   </Text>
                 </View>
               </View>

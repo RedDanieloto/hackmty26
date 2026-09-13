@@ -120,10 +120,6 @@ class ApiService {
   private buildUrl(path: string, customUrl?: string): string {
     const base = (customUrl || this.baseUrl).replace(/\/+$/, '');
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    if (base.includes('ngrok')) {
-      const separator = cleanPath.includes('?') ? '&' : '?';
-      return `${base}${cleanPath}${separator}ngrok-skip-browser-warning=true`;
-    }
     return `${base}${cleanPath}`;
   }
 
@@ -135,10 +131,6 @@ class ApiService {
       'Content-Type': 'application/json',
       Accept: 'application/json',
     };
-
-    if (this.baseUrl.includes('ngrok')) {
-      headers['ngrok-skip-browser-warning'] = 'true';
-    }
 
     if (includeAuth && this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
@@ -215,7 +207,7 @@ class ApiService {
       const errStr = String(err?.message || err);
       if (errStr.includes('Failed to fetch') || err?.name === 'TypeError') {
         throw new Error(
-          'No se pudo conectar con el servidor (túnel ngrok fuera de línea o error de red/CORS). Verifica la URL de tu API.'
+          'No se pudo conectar con el servidor. Verifica que el backend esté en ejecución y accesible.'
         );
       }
       throw new Error(`Error de red al conectar con el servidor: ${err?.message || err}`);
@@ -258,17 +250,13 @@ class ApiService {
     try {
       response = await fetch(fullUrl, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: this.getHeaders(true),
       });
     } catch (err: any) {
       const errStr = String(err?.message || err);
       if (errStr.includes('Failed to fetch') || err?.name === 'TypeError') {
         throw new Error(
-          'No se pudo conectar con el servidor (túnel ngrok fuera de línea o error de red).'
+          'No se pudo conectar con el servidor. Verifica tu conexión de red.'
         );
       }
       throw new Error(`Error de red: ${err?.message || err}`);
@@ -298,7 +286,7 @@ class ApiService {
       const errStr = String(err?.message || err);
       if (errStr.includes('Failed to fetch') || err?.name === 'TypeError') {
         throw new Error(
-          'No se pudo conectar con el servidor (túnel ngrok fuera de línea o error de red).'
+          'No se pudo conectar con el servidor. Verifica tu conexión de red.'
         );
       }
       throw new Error(`Error al enviar audio al clasificador: ${err?.message || err}`);

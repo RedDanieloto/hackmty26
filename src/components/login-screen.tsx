@@ -278,7 +278,7 @@ export function LoginScreen() {
             </View>
 
             <Text style={styles.configModalDesc}>
-              Si cambiaste de red Wi-Fi o reiniciaste tu túnel ngrok, ingresa aquí la nueva URL de tu backend:
+              Ingresa la dirección IP o URL de tu servidor backend FastAPI:
             </Text>
 
             <View style={styles.configInputGroup}>
@@ -287,7 +287,7 @@ export function LoginScreen() {
                 style={styles.configInput}
                 value={apiUrlInput}
                 onChangeText={setApiUrlInput}
-                placeholder="https://xxxx.ngrok-free.app o http://localhost:8000"
+                placeholder="http://64.177.86.66:8000 o http://localhost:8000"
                 placeholderTextColor="rgba(221, 214, 185, 0.4)"
                 autoCapitalize="none"
                 autoCorrect={false}

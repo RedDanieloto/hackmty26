@@ -216,13 +216,13 @@ export default function TabTwoScreen() {
                       </View>
 
                       <View style={styles.historyRow}>
-                        <Text style={styles.historyLabel}>Certeza Humana:</Text>
+                        <Text style={styles.historyLabel}>Resultado:</Text>
                         <Text
                           style={[
                             styles.historyValue,
                             isHuman ? styles.textGreen : styles.textRed,
                           ]}>
-                          {item.result.humanConfidence}% (Riesgo IA: {item.result.aiConfidence}%)
+                          {isHuman ? 'Autenticación Exitosa' : 'Bloqueada por Seguridad'}
                         </Text>
                       </View>
 

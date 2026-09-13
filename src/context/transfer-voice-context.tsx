@@ -30,13 +30,14 @@ export interface TransferDetails {
 
 export interface VoiceAnalysisResult {
   isHuman: boolean;
-  humanConfidence: number; // e.g. 99.4
-  aiConfidence: number;    // e.g. 0.6
-  vocalTractScore: number; // Biological vocal cord resonance
-  spectralJitter: number;  // Micro-inflections
-  neuralArtifactsScore: number; // Deepfake synthesis artifacts
   challengePhrase: string;
-  durationMs: number;
+  statusText?: string;
+  durationMs?: number;
+  humanConfidence?: number;
+  aiConfidence?: number;
+  vocalTractScore?: number;
+  spectralJitter?: number;
+  neuralArtifactsScore?: number;
 }
 
 export interface SimulationSettings {
@@ -112,19 +113,20 @@ const DEFAULT_SETTINGS: SimulationSettings = {
 };
 
 const DEFAULT_TRANSFER: TransferDetails = {
-  recipientName: 'Alejandro Morales Rivera',
-  bankName: 'BBVA Bancomer',
-  accountNumber: '012 180 0154829104 9',
-  amount: 150000,
-  concept: 'Adquisición de equipamiento',
-  folio: 'ALT-892401',
+  recipientName: 'Maria Fernanda Lopez',
+  bankName: 'BBVA',
+  accountNumber: '0011223344',
+  amount: 10,
+  concept: 'Transferencia Altur',
+  folio: '',
   timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  beneficiaryId: 'benef-jorge-1',
 };
 
 const DEFAULT_ACCOUNT: AccountOut = {
-  account_number: '8849 2019 4482 1920',
-  account_type: 'Cuenta de Cheques Empresarial',
-  balance: 248500.0,
+  account_number: '0123456789',
+  account_type: 'Cuenta de debito',
+  balance: 23149.5,
   currency: 'MXN',
   status: 'active',
   opened_at: '2024-01-15T10:00:00.000Z',
@@ -132,52 +134,52 @@ const DEFAULT_ACCOUNT: AccountOut = {
 
 const DEFAULT_BENEFICIARIES: BeneficiaryOut[] = [
   {
-    beneficiary_id: 'ben-1',
-    name: 'Alejandro Morales Rivera',
-    account_number: '012 180 0154829104 9',
-    bank_name: 'BBVA México',
+    beneficiary_id: 'benef-jorge-1',
+    name: 'Maria Fernanda Lopez',
+    account_number: '0011223344',
+    bank_name: 'BBVA',
   },
   {
-    beneficiary_id: 'ben-2',
-    name: 'Sofía Hernández Garza',
-    account_number: '072 580 0029384711 3',
+    beneficiary_id: 'benef-jorge-2',
+    name: 'Carlos Alberto Reyes',
+    account_number: '0055667788',
+    bank_name: 'Santander',
+  },
+  {
+    beneficiary_id: 'benef-dan-1',
+    name: 'Ana Sofia Torres',
+    account_number: '0099887766',
     bank_name: 'Banorte',
-  },
-  {
-    beneficiary_id: 'ben-3',
-    name: 'Tecnología & Serv. Cloud S.A.',
-    account_number: '002 180 0984123890 1',
-    bank_name: 'Citibanamex',
   },
 ];
 
 const DEFAULT_TRANSACTIONS: TransactionOut[] = [
   {
-    transaction_id: 'tx-101',
-    type: 'cargo',
-    concept: 'SPEI / Servidores y Computación',
-    amount: 14500,
-    resulting_balance: 248500,
-    date: new Date(Date.now() - 3600000 * 2).toISOString(),
-    status: 'completada',
+    transaction_id: 'seed-tx-3',
+    type: 'deposit',
+    concept: 'Deposito de nomina',
+    amount: 12000,
+    resulting_balance: 23149.5,
+    date: new Date(Date.now() - 3 * 86400000).toISOString(),
+    status: 'completed',
   },
   {
-    transaction_id: 'tx-102',
-    type: 'abono',
-    concept: 'Depósito Nómina / SPEI Recibido',
-    amount: 68000,
-    resulting_balance: 263000,
-    date: new Date(Date.now() - 3600000 * 26).toISOString(),
-    status: 'completada',
+    transaction_id: 'seed-tx-2',
+    type: 'purchase',
+    concept: 'Supermercado',
+    amount: -850.5,
+    resulting_balance: 11149.5,
+    date: new Date(Date.now() - 8 * 86400000).toISOString(),
+    status: 'completed',
   },
   {
-    transaction_id: 'tx-103',
-    type: 'cargo',
-    concept: 'Pago Corporativo Fibra Óptica',
-    amount: 3200,
-    resulting_balance: 195000,
-    date: new Date(Date.now() - 3600000 * 48).toISOString(),
-    status: 'completada',
+    transaction_id: 'seed-tx-1',
+    type: 'deposit',
+    concept: 'Deposito de nomina',
+    amount: 12000,
+    resulting_balance: 12000,
+    date: new Date(Date.now() - 10 * 86400000).toISOString(),
+    status: 'completed',
   },
 ];
 
@@ -203,7 +205,7 @@ export function TransferVoiceProvider({ children }: { children: React.ReactNode 
   const [account, setAccount] = useState<AccountOut | null>(DEFAULT_ACCOUNT);
   const [beneficiaries, setBeneficiaries] = useState<BeneficiaryOut[]>(DEFAULT_BENEFICIARIES);
   const [transactions, setTransactions] = useState<TransactionOut[]>(DEFAULT_TRANSACTIONS);
-  const [selectedBeneficiaryId, setSelectedBeneficiaryIdState] = useState<string>('ben-1');
+  const [selectedBeneficiaryId, setSelectedBeneficiaryIdState] = useState<string>('benef-jorge-1');
   const [isBankLoading, setIsBankLoading] = useState(false);
   const [isBankLive, setIsBankLive] = useState(false);
 
@@ -235,10 +237,11 @@ export function TransferVoiceProvider({ children }: { children: React.ReactNode 
       if (activeToken) {
         api.setToken(activeToken);
       }
-      const [accRes, bensRes, txsRes] = await Promise.allSettled([
+      const [accRes, bensRes, txsRes, transfersRes] = await Promise.allSettled([
         api.getAccount(settings.apiUrl),
         api.getBeneficiaries(settings.apiUrl),
         api.getTransactions(20, 0, settings.apiUrl),
+        api.listTransfers(20, 0, settings.apiUrl),
       ]);
       if (accRes.status === 'fulfilled' && accRes.value) {
         setAccount(accRes.value);
@@ -246,12 +249,33 @@ export function TransferVoiceProvider({ children }: { children: React.ReactNode 
       }
       if (bensRes.status === 'fulfilled' && Array.isArray(bensRes.value) && bensRes.value.length > 0) {
         setBeneficiaries(bensRes.value);
-        if (!bensRes.value.some((b) => b.beneficiary_id === selectedBeneficiaryId)) {
-          setSelectedBeneficiaryId(bensRes.value[0].beneficiary_id);
-        }
+        const validId = bensRes.value.some((b) => b.beneficiary_id === selectedBeneficiaryId)
+          ? selectedBeneficiaryId
+          : bensRes.value[0].beneficiary_id;
+        setSelectedBeneficiaryId(validId);
       }
       if (txsRes.status === 'fulfilled' && txsRes.value?.items && txsRes.value.items.length > 0) {
         setTransactions(txsRes.value.items);
+      }
+      if (transfersRes.status === 'fulfilled' && Array.isArray(transfersRes.value) && transfersRes.value.length > 0) {
+        const mappedLogs: VerificationLogItem[] = transfersRes.value.map((t) => ({
+          id: t.transfer_id,
+          folio: t.transfer_id,
+          timestamp: new Date(t.created_at).toLocaleString('es-MX', {
+            day: '2-digit',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          amount: t.amount,
+          recipientName: t.beneficiary_name,
+          result: {
+            isHuman: t.status === 'completed' || t.status === 'confirmed',
+            challengePhrase: t.confirmation_phrase || t.concept,
+            statusText: t.status,
+          },
+        }));
+        setHistory(mappedLogs);
       }
     } catch (err: any) {
       console.log('[Bank Data refresh notice]:', err?.message);
@@ -268,42 +292,7 @@ export function TransferVoiceProvider({ children }: { children: React.ReactNode 
     refreshBankData();
   }, [user?.accessToken, isAuthenticated, settings.apiUrl]);
 
-  const [history, setHistory] = useState<VerificationLogItem[]>([
-    {
-      id: 'log-1',
-      folio: 'ALT-772910',
-      timestamp: '08:45 AM',
-      amount: 85000,
-      recipientName: 'Inmobiliaria del Norte S.A.',
-      result: {
-        isHuman: true,
-        humanConfidence: 99.1,
-        aiConfidence: 0.9,
-        vocalTractScore: 98.4,
-        spectralJitter: 97.9,
-        neuralArtifactsScore: 1.1,
-        challengePhrase: 'Criptografía verde sobre el río dorado #412',
-        durationMs: 2100,
-      },
-    },
-    {
-      id: 'log-2',
-      folio: 'ALT-664120',
-      timestamp: 'Ayer, 18:20',
-      amount: 320000,
-      recipientName: 'Cuenta Desconocida / STP',
-      result: {
-        isHuman: false,
-        humanConfidence: 2.1,
-        aiConfidence: 97.9,
-        vocalTractScore: 11.2,
-        spectralJitter: 4.8,
-        neuralArtifactsScore: 98.6,
-        challengePhrase: 'El halcón de montaña vuela al amanecer #891',
-        durationMs: 2200,
-      },
-    },
-  ]);
+  const [history, setHistory] = useState<VerificationLogItem[]>([]);
 
   // Generate a random dynamic security challenge phrase with a random security pin code
   const generateNewChallengePhrase = (): string => {
@@ -408,12 +397,8 @@ export function TransferVoiceProvider({ children }: { children: React.ReactNode 
             clearInterval(interval);
             const result: VoiceAnalysisResult = {
               isHuman: true,
-              humanConfidence: 99.4,
-              aiConfidence: 0.6,
-              vocalTractScore: 99.2,
-              spectralJitter: 98.5,
-              neuralArtifactsScore: 0.8,
-              challengePhrase,
+              challengePhrase: statusRes.confirmation_phrase || challengePhrase,
+              statusText: 'completed',
               durationMs: 2400,
             };
             setAnalysisResult(result);
@@ -427,16 +412,13 @@ export function TransferVoiceProvider({ children }: { children: React.ReactNode 
             clearInterval(interval);
             const result: VoiceAnalysisResult = {
               isHuman: false,
-              humanConfidence: 1.2,
-              aiConfidence: 98.8,
-              vocalTractScore: 10.5,
-              spectralJitter: 3.2,
-              neuralArtifactsScore: 99.1,
-              challengePhrase,
+              challengePhrase: statusRes.confirmation_phrase || challengePhrase,
+              statusText: st,
               durationMs: 2400,
             };
             setAnalysisResult(result);
             setVerificationState('detected_ai');
+            refreshBankData();
             setTimeout(() => {
               setIsCallModalVisible(false);
               setIsReceiptModalVisible(true);
@@ -528,12 +510,8 @@ export function TransferVoiceProvider({ children }: { children: React.ReactNode 
     if (isHumanResult) {
       const result: VoiceAnalysisResult = {
         isHuman: true,
-        humanConfidence: humanConf,
-        aiConfidence: aiConf,
-        vocalTractScore: 99.1,
-        spectralJitter: 98.7,
-        neuralArtifactsScore: 1.2,
         challengePhrase,
+        statusText: 'completed',
         durationMs: 2200,
       };
       setAnalysisResult(result);
@@ -560,9 +538,9 @@ export function TransferVoiceProvider({ children }: { children: React.ReactNode 
           type: 'cargo',
           concept: transfer.concept || `SPEI a ${transfer.recipientName}`,
           amount: transfer.amount,
-          resulting_balance: (account?.balance || 248500) - transfer.amount,
+          resulting_balance: (account?.balance || 23149.5) - transfer.amount,
           date: new Date().toISOString(),
-          status: 'completada',
+          status: 'completed',
         },
         ...prev,
       ]);
@@ -573,15 +551,11 @@ export function TransferVoiceProvider({ children }: { children: React.ReactNode 
         setIsReceiptModalVisible(true);
       }, 1000);
     } else {
-      // AI Detected!
+      // AI Detected or voice verification failed!
       const result: VoiceAnalysisResult = {
         isHuman: false,
-        humanConfidence: humanConf,
-        aiConfidence: aiConf,
-        vocalTractScore: 12.4, // Fake vocal cords
-        spectralJitter: 4.1, // Lack of natural jitter
-        neuralArtifactsScore: 98.9, // High TTS synthesis signature
         challengePhrase,
+        statusText: 'rejected',
         durationMs: 2200,
       };
       setAnalysisResult(result);

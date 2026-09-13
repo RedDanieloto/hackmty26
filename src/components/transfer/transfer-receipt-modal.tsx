@@ -20,13 +20,19 @@ export function TransferReceiptModal() {
     isReceiptModalVisible,
     analysisResult,
     transfer,
+    liveTransferData,
+    beneficiaries,
     closeReceipt,
     initiateTransfer,
   } = useTransferVoice();
 
   if (!analysisResult) return null;
 
-  const isSuccess = analysisResult.isHuman;
+  // Determine success from server status if available, fallback to analysisResult.isHuman
+  const serverStatus = liveTransferData?.status?.toLowerCase();
+  const isSuccess = serverStatus
+    ? serverStatus === 'completed' || serverStatus === 'confirmed' || serverStatus === 'approved'
+    : analysisResult.isHuman;
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('es-MX', {
@@ -35,6 +41,34 @@ export function TransferReceiptModal() {
       maximumFractionDigits: 0,
     }).format(val);
   };
+
+  // Real fields prioritizing live server data
+  const realFolio = liveTransferData?.transfer_id || transfer.folio || 'N/A';
+  const realAmount = liveTransferData?.amount ?? transfer.amount ?? 0;
+  const realBeneficiaryName = liveTransferData?.beneficiary_name || transfer.recipientName || 'Beneficiario';
+  const realConcept = liveTransferData?.concept || transfer.concept || '';
+  const realPhrase = liveTransferData?.confirmation_phrase || analysisResult.challengePhrase || '';
+  const realStatus = liveTransferData?.status || (isSuccess ? 'completed' : 'rejected');
+
+  // Find real beneficiary bank and account from beneficiaries list
+  const matchedBen = beneficiaries.find(
+    (b) =>
+      b.beneficiary_id === transfer.beneficiaryId ||
+      b.name.trim().toLowerCase() === realBeneficiaryName.trim().toLowerCase()
+  );
+
+  const realBankName = matchedBen?.bank_name || (transfer.bankName !== 'BBVA Bancomer' ? transfer.bankName : '');
+  const realAccountNumber = matchedBen?.account_number || (transfer.accountNumber !== '012 180 0154829104 9' ? transfer.accountNumber : '');
+
+  // Formatted date
+  const formattedDate = liveTransferData?.created_at
+    ? new Date(liveTransferData.created_at).toLocaleString('es-MX', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : `${transfer.timestamp || 'Hoy'}`;
 
   return (
     <Modal
@@ -65,8 +99,8 @@ export function TransferReceiptModal() {
 
               <Text style={styles.statusSubtitle}>
                 {isSuccess
-                  ? 'Identidad vocal humana autenticada con éxito'
-                  : 'Voz sintética o deepfake detectado por Altur'}
+                  ? 'Identidad vocal validada satisfactoriamente'
+                  : 'Validación por voz no superada por seguridad'}
               </Text>
             </View>
 
@@ -74,17 +108,17 @@ export function TransferReceiptModal() {
             <View style={styles.amountBox}>
               <Text style={styles.amountLabel}>Monto de la Operación</Text>
               <Text style={[styles.amountValue, isSuccess ? styles.textSuccess : styles.textBlocked]}>
-                {formatCurrency(transfer.amount)}
+                {formatCurrency(realAmount)}
               </Text>
             </View>
 
-            {/* Biometric Analysis Breakdown */}
+            {/* Authentic Telephony Voice Verification Certificate */}
             <View style={styles.analysisBox}>
               <View style={styles.analysisBoxHeader}>
                 <View style={styles.analysisBoxTitleRow}>
-                  <AppIcon name="shield" size={13} color={BrandColors.sandDune} />
+                  <AppIcon name="shield-check" size={14} color={BrandColors.sandDune} />
                   <Text style={styles.analysisBoxTitle}>
-                    Certificado Biométrico Anti-Spoofing
+                    Validación Telefónica Altur
                   </Text>
                 </View>
                 <View
@@ -97,63 +131,78 @@ export function TransferReceiptModal() {
                       styles.tagText,
                       isSuccess ? styles.tagTextSuccess : styles.tagTextBlocked,
                     ]}>
-                    {isSuccess ? 'VOZ REAL' : 'CLON IA DETECTADO'}
+                    {isSuccess ? 'APROBADA' : 'BLOQUEADA'}
                   </Text>
                 </View>
               </View>
 
               <View style={styles.metricRow}>
-                <Text style={styles.metricLabel}>Probabilidad Humano Real:</Text>
+                <Text style={styles.metricLabel}>Estado en Servidor:</Text>
                 <Text style={[styles.metricValue, isSuccess ? styles.metricGreen : styles.metricRed]}>
-                  {analysisResult.humanConfidence}%
+                  {realStatus.toUpperCase()}
                 </Text>
               </View>
 
               <View style={styles.metricRow}>
-                <Text style={styles.metricLabel}>Riesgo de Síntesis / Clon IA:</Text>
-                <Text style={[styles.metricValue, isSuccess ? styles.metricGreen : styles.metricRed]}>
-                  {analysisResult.aiConfidence}%
-                </Text>
+                <Text style={styles.metricLabel}>Canal de Validación:</Text>
+                <Text style={styles.metricValue}>Llamada Telefónica</Text>
               </View>
 
-              <View style={styles.metricRow}>
-                <Text style={styles.metricLabel}>Resonancia Glótica / Biológica:</Text>
-                <Text style={styles.metricValue}>{analysisResult.vocalTractScore}%</Text>
-              </View>
+              {realPhrase ? (
+                <View style={styles.metricRow}>
+                  <Text style={styles.metricLabel}>Frase de Seguridad:</Text>
+                  <Text style={styles.metricValueSmall} numberOfLines={2}>
+                    "{realPhrase}"
+                  </Text>
+                </View>
+              ) : null}
 
               <View style={styles.metricRow}>
-                <Text style={styles.metricLabel}>Frase de Desafío validada:</Text>
-                <Text style={styles.metricValueSmall} numberOfLines={1}>
-                  "{analysisResult.challengePhrase}"
+                <Text style={styles.metricLabel}>Diagnóstico:</Text>
+                <Text style={[styles.metricValueSmall, isSuccess ? styles.metricGreen : styles.metricRed]}>
+                  {isSuccess
+                    ? 'Identidad confirmada en llamada'
+                    : 'Voz sintética o frase incorrecta reportada'}
                 </Text>
               </View>
             </View>
 
-            {/* Transaction Data */}
+            {/* Real Transaction Data */}
             <View style={styles.detailsBox}>
               <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>Beneficiario</Text>
-                <Text style={styles.detailValue}>{transfer.recipientName}</Text>
+                <Text style={styles.detailValue}>{realBeneficiaryName}</Text>
               </View>
 
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Banco Destino</Text>
-                <Text style={styles.detailValue}>{transfer.bankName}</Text>
-              </View>
+              {realBankName ? (
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Banco Destino</Text>
+                  <Text style={styles.detailValue}>{realBankName}</Text>
+                </View>
+              ) : null}
 
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Cuenta / CLABE</Text>
-                <Text style={styles.detailValue}>{transfer.accountNumber}</Text>
-              </View>
+              {realAccountNumber ? (
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Cuenta / CLABE</Text>
+                  <Text style={styles.detailValue}>{realAccountNumber}</Text>
+                </View>
+              ) : null}
+
+              {realConcept ? (
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Concepto</Text>
+                  <Text style={styles.detailValue}>{realConcept}</Text>
+                </View>
+              ) : null}
 
               <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>Folio de Operación</Text>
-                <Text style={styles.detailValueCode}>{transfer.folio}</Text>
+                <Text style={styles.detailValueCode}>{realFolio}</Text>
               </View>
 
               <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>Hora y Fecha</Text>
-                <Text style={styles.detailValue}>{transfer.timestamp} • Hoy</Text>
+                <Text style={styles.detailValue}>{formattedDate}</Text>
               </View>
             </View>
 
@@ -162,8 +211,7 @@ export function TransferReceiptModal() {
               <View style={styles.fraudAlertNotice}>
                 <AppIcon name="shield-alert" size={16} color="#FCA5A5" />
                 <Text style={styles.fraudAlertText}>
-                  Sus fondos no salieron de su cuenta. Se ha activado el protocolo de
-                  congelamiento temporal por sospecha de suplantación de voz no autorizada.
+                  Sus fondos no salieron de su cuenta. La transferencia fue cancelada debido a que el servidor telefónico no validó satisfactoriamente la voz o la frase requerida.
                 </Text>
               </View>
             )}
@@ -185,7 +233,7 @@ export function TransferReceiptModal() {
                     }}
                     style={({ pressed }) => [styles.retryBtn, pressed && styles.btnPressed]}>
                     <AppIcon name="refresh" size={14} color="#FFFFFF" />
-                    <Text style={styles.retryBtnText}>Reintentar con Voz Real</Text>
+                    <Text style={styles.retryBtnText}>Reintentar Transferencia</Text>
                   </Pressable>
                   <Pressable
                     onPress={closeReceipt}
