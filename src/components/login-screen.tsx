@@ -310,7 +310,7 @@ export function LoginScreen() {
                   testAndSaveUrl(DEFAULT_API_BASE_URL);
                 }}
                 style={styles.presetPill}>
-                <Text style={styles.presetPillText}>ngrok default</Text>
+                <Text style={styles.presetPillText}>Producción (64.177.86.66)</Text>
               </Pressable>
             </View>
 

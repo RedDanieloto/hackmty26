@@ -1,12 +1,11 @@
 /**
  * Altur & Voice Authentication API Client
- * Generated for FastAPI 0.1.0 (OAS 3.1)
- * Tunnel: https://7b22-2806-2f0-4a40-f894-e260-4aff-fefa-a930.ngrok-free.app
+ * Production Server: http://64.177.86.66:8000
  */
 
 import { Platform } from 'react-native';
 
-export const DEFAULT_API_BASE_URL = 'https://7b22-2806-2f0-4a40-f894-e260-4aff-fefa-a930.ngrok-free.app';
+export const DEFAULT_API_BASE_URL = 'http://64.177.86.66:8000';
 
 export interface CustomerOut {
   full_name: string;
@@ -116,24 +115,30 @@ class ApiService {
   }
 
   /**
-   * Helper to build safe URL with ngrok bypass query parameter
+   * Helper to build clean standard URL
    */
   private buildUrl(path: string, customUrl?: string): string {
     const base = (customUrl || this.baseUrl).replace(/\/+$/, '');
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    const separator = cleanPath.includes('?') ? '&' : '?';
-    return `${base}${cleanPath}${separator}ngrok-skip-browser-warning=true`;
+    if (base.includes('ngrok')) {
+      const separator = cleanPath.includes('?') ? '&' : '?';
+      return `${base}${cleanPath}${separator}ngrok-skip-browser-warning=true`;
+    }
+    return `${base}${cleanPath}`;
   }
 
   /**
-   * Helper to build standard headers including ngrok bypass
+   * Helper to build standard headers
    */
   private getHeaders(includeAuth = true): HeadersInit {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      'ngrok-skip-browser-warning': 'true',
     };
+
+    if (this.baseUrl.includes('ngrok')) {
+      headers['ngrok-skip-browser-warning'] = 'true';
+    }
 
     if (includeAuth && this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
