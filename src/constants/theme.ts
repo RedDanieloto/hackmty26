@@ -7,6 +7,15 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
+export const BrandColors = {
+  sandDune: '#DDD6B9',
+  hunterGreen: '#3E5F44',
+  hunterGreenDark: '#28412D',
+  hunterGreenDeep: '#1C2E20',
+  sandDuneLight: '#F3EFE1',
+  sandDuneMuted: 'rgba(221, 214, 185, 0.7)',
+} as const;
+
 export const Colors = {
   light: {
     text: '#000000',
